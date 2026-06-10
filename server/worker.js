@@ -1,6 +1,9 @@
 import { Worker } from "bullmq";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { loadPdfPages } from "./utils.js";
+import { OpenAIEmbeddings } from "@langchain/openai";
+import { QdrantVectorStore } from "@langchain/qdrant";
+import "dotenv/config";
 
 console.log("Worker booting...");
 
@@ -13,19 +16,26 @@ const worker = new Worker(
       typeof job.data === "string" ? JSON.parse(job.data) : job.data;
 
     const docs = await loadPdfPages(data.path);
-
+  
     const textSplitter = new RecursiveCharacterTextSplitter({
       chunkSize: 300,
       chunkOverlap: 50,
     });
-
+    
+    
     const allSplits = await textSplitter.splitDocuments(docs);
+    const embeddings = new OpenAIEmbeddings({
+      model: 'text-embedding-3-small',
+      apiKey: process.env.OPENAI_API_KEY
+    })
+    const vectorStore = await QdrantVectorStore.fromExistingCollection(embeddings, {
+    url: 'http://localhost:6333',
+    collectionName: "pdf-docs",
+    });
 
-    console.log(allSplits)
+    await vectorStore.addDocuments(docs)
+    console.log('All docs added to vector store')
 
-    return {
-      chunks: allSplits.length,
-    };
   },
   {
     concurrency: 2,
