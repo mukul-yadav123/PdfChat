@@ -70,7 +70,7 @@ app.get('/chat', async(req,res) => {
             {"role": "user", content: userQuery}
         ]
     })
-    return res.json({message:chatResult.choices[0].message.content})
+    return res.json({message:chatResult.choices[0].message.content,docs: result})
 })
 
 app.listen(8000, () => {
