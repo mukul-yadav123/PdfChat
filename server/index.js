@@ -73,6 +73,29 @@ app.get('/chat', async(req,res) => {
     return res.json({message:chatResult.choices[0].message.content,docs: result})
 })
 
+app.use('/uploads', express.static('uploads'))
+
+app.get('/download', (req, res) => {
+    const filePath = req.query.path;
+    if (!filePath) {
+        return res.status(400).send('Path is required');
+    }
+    // Simple security check to prevent path traversal
+    const normalizedPath = filePath.replace(/\\/g, '/');
+    if (normalizedPath.includes('..') || !normalizedPath.startsWith('uploads/')) {
+        return res.status(403).send('Access denied');
+    }
+    
+    const parts = normalizedPath.split('/');
+    const filename = parts[parts.length - 1] || '';
+    
+    // Find the first index of '-' after the unique timestamp
+    const dashIndex = filename.indexOf('-');
+    const originalName = dashIndex !== -1 ? filename.substring(dashIndex + 1) : filename;
+    
+    res.download(normalizedPath, originalName);
+});
+
 app.listen(8000, () => {
     console.log(`Server started on PORT 8000`)
 })
